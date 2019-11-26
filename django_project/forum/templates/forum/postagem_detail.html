@@ -1,0 +1,213 @@
+{% extends 'forum/base.html' %}
+{% block customcss %}
+<style>
+    .botao-direita {
+        position: absolute;
+        right: 5%;
+    }
+
+    .ck-editor__editable_inline {
+        min-height: 150px;
+        max-height: 150px;
+    }
+
+    .cabecalho-respostas {
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 16px;
+    }
+</style>
+{% endblock customcss %}
+{% block content %}
+    <article class="media content-section" style="border-radius: 15px">
+        <div class="media-body">
+            <div class="article-metadata">
+                <a class="mr-2" href="#">{{ object.autor }}</a>
+                <small class="text-muted">{{ object.data_publicacao|date:"F d, Y" }}</small>
+                {% if object.autor == user %}
+                    <div>
+                        <a class="btn btn-secondary btn-sm mt-1 mb-1" href="{% url 'postagem-update' object.id %}">Editar</a>
+                        <a class="btn btn-danger btn-sm mt-1 mb-1" href="{% url 'postagem-delete' object.id %}">Apagar</a>
+                    </div>
+                {% endif %}
+            </div>
+            <h2 class="article-title">
+                {{ object.titulo }}
+            </h2>
+            <p class="article-content">{{ object.mensagem|safe }}</p>
+        </div>
+    </article>
+    <article class="media content-section" style="border-radius: 10px;">
+        <div class="media-body">
+            <form method="POST" action="{% url 'resposta-create' %}" id="form-post">
+                {% csrf_token %}
+                <div class="d-none">
+                    <input type="text" class="form-control" name="postagem" id="id_postagem" value="{{ object.id }}"/>
+                </div>
+                <div class="d-none">
+                    <textarea name="mensagem" id="id_mensagem" cols="40" rows="10"></textarea>
+                </div>
+                <div class="form-group">
+                    <textarea id="editor"></textarea>
+                </div>
+                <div>
+                    <button type="button" onclick="javascript:envia_formulario();" class="btn btn-dark btn-sm botao-direita">Responder</button>
+                </div>
+                <br/>
+                <br/>
+            </form>
+        </div>
+    </article>
+    {% for resposta in object.respostas.all %}
+    <article class="media content-section" style="border-radius: 15px;">
+        <div class="media-body">
+            <div class="row">
+                <div id='id_resp_{{ resposta.id }}' style="padding: 10px 20px;" class="col-lg-11">
+                    <div class="cabecalho-respostas">
+                        <strong><a class="mr-2" href="#">{{ resposta.autor }}</a></strong>
+                        <span class="text-muted">
+                            {{ resposta.data_publicacao|timesince }}
+                            {% if resposta.data_edicao %}
+                                <span style="color: red;">
+                                    Editado em {{ resposta.data_edicao|timesince }}
+                                </span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <p>{{ resposta.mensagem|safe }}</p>
+                    {% if resposta.autor == user %}
+                        <small>
+                            <strong>
+                                <a href="javascript:mostrar_editor_resposta('{{ resposta.id }}')">Editar</a>
+                                <a href="{% url 'resposta-delete' resposta.id %}">Excluir</a>
+                            </strong>
+                        </small>
+                    {% endif %}
+                </div>
+                {% if resposta.autor == user %}
+                <div id='id_resp_form_{{resposta.id}}' style="padding: 10px 20px; display: none;">
+                    <div class="cabecalho-respostas">
+                        <strong><a class="mr-2" href="#">{{ resposta.autor }}</a></strong>
+                        <span class="text-muted">{{ resposta.data_publicacao|timesince }}</span>
+                    </div>
+                    <p id='p_edit_resp_{{ resposta.id }}'>
+                    <form method="POST" action="{% url 'resposta-update' resposta.id %}" id="form_edit_resp_{{ resposta.id }}">
+                        {% csrf_token %}
+                        <div class="d-none">
+                            <input type="text" class="form-control" name="resposta" id="id_resposta" value="{{ resposta.id }}"/>
+                        </div>
+                        <div class="d-none" id='div_mensagem_edit_{{ resposta.id }}'>
+                            <textarea name="mensagem" id="id_mensagem" cols="40" rows="10"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <textarea id="editor_resposta_{{ resposta.id }}">
+                                {{ resposta.mensagem }}
+                            </textarea>
+                        </div>
+                        <div>
+                            <button type="button" onclick="javascript:editar_resposta('{{ resposta.id }}');" class="btn btn-dark btn-sm botao-direita">Responder</button>
+                        </div>
+                        <br/>
+                        <br/>
+                    </form>
+                    </p>
+                </div>
+                {% endif %}
+                <div class="col-lg-1 align-middle">
+                    {% if object.tipo == 'P' %}
+                        {% if resposta.is_resposta %}
+                        <a style="font-size: 30px; color: green;">
+                            <i class="fas fa-check"></i>
+                        </a>
+                        {% else %}
+                            {% if object.autor == user %}
+                            <a href="javascript:abreModalResposta('{{ resposta.id }}');" style="font-size: 30px; color: blue;">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </article>
+    {% empty %}
+    <article class="media content-section" style="border-radius: 15px;">
+        <div class="media-body">
+            Ainda não há respostas para essa postagem.
+        </div>
+    </article>
+    {% endfor %}
+
+    <!-- Modal -->
+    <div class="modal fade" id="confirmaRespostaModal" tabindex="-1" role="dialog" aria-labelledby="confirmaRespostaModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Confirmar resposta?</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Deseja confirma a resposta selecionada como a resposta para a sua pergunta?
+                <form action="{% url 'marcar-resposta' %}" method="POST" id="form_responder" hidden>
+                    {% csrf_token %}
+                    <input type='text' id="id_pergunta" name='id_pergunta' value='{{ object.id }}'>
+                    <input type='text' id='id_resposta' name='id_resposta'>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a href="javascript:marcar_resposta();" class="btn btn-primary">Confirmar</a>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+{% endblock content %}
+{% block customjs %}
+<script src="https://cdn.ckeditor.com/ckeditor5/15.0.0/classic/ckeditor.js"></script>
+<script>
+    ClassicEditor
+        .create( document.querySelector( '#editor' ) )
+        .catch( error => {
+            console.error( error );
+        } );
+
+    function envia_formulario(){
+        var msg = $('#form-post > div.form-group > div > div.ck.ck-editor__main > div').html();
+        //var text = $('#form-post > div.form-group > div > div.ck.ck-editor__main > div').contents().find("body").text();
+        $('#id_mensagem').val(msg);
+
+        document.getElementById("form-post").submit();
+    }
+
+    function mostrar_editor_resposta(id){
+        ClassicEditor
+            .create( document.querySelector( '#editor_resposta_'+id ) )
+            .catch( error => {
+                console.error( error );
+            } );
+        document.getElementById('id_resp_form_'+id).style.display = '';
+        document.getElementById('id_resp_'+id).style.display = 'none';
+    }
+
+    function editar_resposta(id){
+        var msg = $('#form_edit_resp_'+ id +' > div.form-group > div > div.ck.ck-editor__main > div').html();
+        $('#div_mensagem_edit_'+id+' > textarea').val(msg);
+        console.log($('#div_mensagem_edit_'+id+' > textarea').val());
+        document.getElementById('form_edit_resp_'+id).submit();
+    }
+
+    function abreModalResposta(id){
+        $('#form_responder > #id_resposta').val(id);
+        $('#confirmaRespostaModal').modal('show');
+    }
+
+    function marcar_resposta(){
+        document.getElementById('form_responder').submit();
+    }
+</script>
+{% endblock customjs %}

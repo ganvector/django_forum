@@ -1,0 +1,29 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block customcss %}
+<style>
+    .botao-direita {
+        position: absolute;
+        right: 5%;
+    }
+</style>
+{% endblock customcss %}
+
+{% block content %}
+<div class="content-section">
+    <form method="POST" id="form-post">
+        {% csrf_token %}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Apagar Resposta</legend>
+        </fieldset>
+        <h2>Você tem certeza que deseja apagar a Resposta?</h2>
+        <div class="form-group botao-direita">
+            <button type="submit" class="btn btn-outline-danger">Sim, apague</button>
+            <a href="{% url 'postagem-detail' object.postagem.id %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+        <br/>
+        <br/>
+    </form>
+</div>
+{% endblock content %}

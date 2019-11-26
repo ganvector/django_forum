@@ -1,0 +1,79 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block customcss %}
+<style>
+    .botao-direita {
+        position: absolute;
+        right: 5%;
+    }
+</style>
+{% endblock customcss %}
+
+{% block content %}
+<div class="content-section">
+    <form method="POST" id="form-post">
+        {% csrf_token %}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Nova Postagem</legend>
+        </fieldset>
+        {% if not object %}
+        <div class="form-group">
+            <div style="display:flex; justify-content: center;">
+                <button type="button" class="btn btn-primary" id="btn-discussao" onclick="javascript:faz_discussao();">Discussao</button>
+                <button type="button" class="btn btn-outline-secondary" id="btn-pergunta" onclick="javascript:faz_pergunta();">Pergunta</button>
+            </div>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <div class="cols-sm-10">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="titulo" id="id_titulo" value="{{ object.titulo }}" placeholder="Titulo"/>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <textarea id="editor">{{ object.mensagem }}</textarea>
+        </div>
+        <div class="d-none">
+            <textarea name="mensagem" id="id_mensagem" cols="40" rows="10">{{ object.mensagem }}</textarea>
+        </div>
+        <div class="d-none">
+            <select name="tipo" id="id_tipo">
+                <option value="P">Pergunta</option>
+                <option value="D">Discussão</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <button type="button" onclick="javascript:envia_formulario();" class="btn btn-dark btn-sm botao-direita">POSTAR</button>
+        </div>
+        <br/>
+        <br/>
+    </form>
+</div>
+{% endblock content %}
+{% block customjs %}
+<script src="https://cdn.ckeditor.com/4.12.1/standard/ckeditor.js"></script>
+<script>
+    CKEDITOR.replace( 'editor' );
+    //alert(CKEDITOR.instances.editor.getData());
+    function envia_formulario(){
+        var msg = CKEDITOR.instances.editor.getData();
+        $("#id_mensagem").val(msg);
+        document.getElementById("form-post").submit();
+    }
+
+    var btn_discussao = $('#btn-discussao');
+    var btn_pergunta = $('#btn-pergunta');
+    function faz_discussao(){
+        $('#btn-discussao').attr('class', 'btn btn-primary');
+        $('#btn-pergunta').attr('class', 'btn btn-outline-secondary');
+        $('#id_tipo').val('D');
+    }
+    function faz_pergunta(){
+        $('#btn-pergunta').attr('class', 'btn btn-primary');
+        $('#btn-discussao').attr('class', 'btn btn-outline-secondary');
+        $('#id_tipo').val('P');
+    }
+</script>
+{% endblock customjs %}
